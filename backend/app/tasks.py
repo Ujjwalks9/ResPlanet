@@ -1,7 +1,7 @@
 from celery import Celery
 from app.config import settings
 from app.rag import process_pdf_for_rag
-from app.database import AsyncSessionLocal # Note: Celery is sync usually, we need a sync DB approach or bridge
+from app.database import AsyncSessionLocal 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.models import Project, Embedding

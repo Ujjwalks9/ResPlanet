@@ -10,7 +10,6 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
-        # This prevents the error if you have extra variables in your .env file
         extra = "ignore" 
 
 settings = Settings()

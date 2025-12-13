@@ -4,8 +4,7 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGener
 import os
 from app.config import settings
 
-# Initialize Gemini Models
-# "models/embedding-001" is the standard text embedding model
+
 embeddings_model = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004", google_api_key=settings.GOOGLE_API_KEY)
 
 
