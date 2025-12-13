@@ -6,6 +6,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.models import Project, Embedding
 from pgvector.sqlalchemy import Vector
+from app.models import ProjectFile
+
 
 # Setup Celery
 celery_app = Celery("worker", broker=settings.REDIS_URL, backend=settings.REDIS_URL)
@@ -16,30 +18,41 @@ engine = create_engine(SYNC_DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
 @celery_app.task
-def process_paper_task(project_id: str, file_path: str):
+@celery_app.task
+def process_paper_task(project_id: str):
     session = SessionLocal()
     try:
-        # 1. Run AI Processing
-        print(f"Processing PDF for project: {project_id}")
-        summary, topics, vectors = process_pdf_for_rag(file_path)
-        
-        # 2. Update Project Metadata
-        project = session.query(Project).filter(Project.id == project_id).first()
-        if project:
-            project.abstract = summary
-            project.topics = topics
-            project.is_processed = True
-        
-        # 3. Save Embeddings
+        project_file = (
+            session.query(ProjectFile)
+            .filter(ProjectFile.project_id == project_id)
+            .first()
+        )
+
+        if not project_file:
+            raise Exception("Project file not found")
+
+        pdf_bytes = project_file.data
+
+        summary, topics, vectors = process_pdf_for_rag(pdf_bytes)
+
+        project = session.query(Project).get(project_id)
+        project.abstract = summary
+        project.topics = topics
+        project.is_processed = True
+
         for v in vectors:
-            emb = Embedding(project_id=project_id, content=v["content"], vector=v["vector"])
-            session.add(emb)
-            
+            session.add(
+                Embedding(
+                    project_id=project_id,
+                    content=v["content"],
+                    vector=v["vector"]
+                )
+            )
+
         session.commit()
-        print(f"Finished processing {project_id}")
-        
+
     except Exception as e:
-        print(f"Error processing PDF: {e}")
         session.rollback()
+        raise e
     finally:
         session.close()
