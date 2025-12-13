@@ -1,5 +1,7 @@
 import uuid
 from datetime import datetime
+from sqlalchemy import Enum as SQLEnum
+import enum
 from sqlalchemy import Column, String, Text, Boolean, Integer, DateTime, ForeignKey, ARRAY
 from sqlalchemy.dialects.postgresql import UUID
 from pgvector.sqlalchemy import Vector
@@ -30,3 +32,29 @@ class Embedding(Base):
     
     # CHANGED: 1536 -> 768 for Gemini Embeddings
     vector = Column(Vector(768))
+
+# Define Status Enum
+class RequestStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+
+# Add these new classes to models.py
+
+class CollabRequest(Base):
+    __tablename__ = "collab_requests"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sender_id = Column(String, ForeignKey("users.id"))
+    receiver_id = Column(String, ForeignKey("users.id")) # Owner of the project
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"))
+    status = Column(String, default=RequestStatus.PENDING)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id")) # Chat room is linked to a project
+    sender_id = Column(String, ForeignKey("users.id")) 
+    content = Column(Text)
+    is_ai = Column(Boolean, default=False) # True if the message is from the Bot
+    created_at = Column(DateTime, default=datetime.utcnow)
