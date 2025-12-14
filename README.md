@@ -1,5 +1,5 @@
 
-<div align="center">
+
 
 # ResPlanet
 ### Decentralized Research Collaboration Platform
@@ -15,7 +15,7 @@
 > **ResPlanet** is an open-source platform designed to modernize academic publishing. It combines the rigorous standards of research with the speed of social networking, featuring RAG-powered peer reviews, real-time collaboration rooms, and dynamic trending feeds.
 
 
-</div>
+
 
 ---
 
@@ -152,36 +152,8 @@ npm run dev
 
 -----
 
-## 🌟 Show your support
-
-If you find this project useful for decentralized research, please give it a **Star** ⭐️\!
-
-\<a href="https://www.google.com/search?q=https://github.com/Ujjwalks9/ResPlanet"\>
-\<img src="https://img.shields.io/github/stars/Ujjwalks9/ResPlanet?style=social" alt="Star on GitHub"\>
-\</a\>
-
------
-
-## 🤝 Contributing
-
-We welcome contributions to ResPlanet\! Please follow these steps:
-
-1.  Fork the repository.
-2.  Create a feature branch (`git checkout -b feature/NewFeature`).
-3.  Commit your changes.
-4.  Push to the branch.
-5.  Open a Pull Request.
-
------
 
 ## 📜 License
 
-This project is licensed under the MIT License - see the `LICENSE` file for details.
-
-\<br /\>
-\<div align="center"\>
-\<sub\>Built with precision by \<a href="https://www.google.com/search?q=https://github.com/Ujjwalks9"\> Ujjwal Kumar Singh\</a\>\</sub\>
-\</div\>
-
-```
+This project is licensed under the MIT License - see the `LICENSE` file for details
 ```
