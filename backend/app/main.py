@@ -3,7 +3,7 @@ import uuid
 import os
 from typing import List
 
-from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
 from io import BytesIO
@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from uuid import UUID
 from sqlalchemy.orm import selectinload
-
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.models import ProjectFile
 
@@ -25,10 +25,20 @@ from app.config import settings
 
 app = FastAPI(title="ResPlanet API (Gemini Edition)")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"], # <--- Whitelist your frontend URL
+    allow_credentials=True,
+    allow_methods=["*"], # Allow all methods (GET, POST, PUT, DELETE)
+    allow_headers=["*"], # Allow all headers
+)
+
 # Mount Static for PDF viewing (OLD FEATURE)
 app.mount("/static", StaticFiles(directory="."), name="static")
 
 app.include_router(auth_router)
+
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -75,12 +85,20 @@ async def startup_event():
 @app.post("/upload")
 async def upload_paper(
     file: UploadFile = File(...),
+    user_id: str = Form(...),
     db: AsyncSession = Depends(get_db)
 ):
+    # Verify the user actually exists (Optional but good safety)
+    result = await db.execute(select(User).filter(User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=400, detail="User not found")
+    
     # 1. Create project
     project = Project(
         title=file.filename,
-        user_id="user_123"  # replace later with auth
+        user_id=user_id,  # <--- No more "user_123"!
+        views_count=0
     )
     db.add(project)
     await db.flush()
@@ -182,7 +200,8 @@ async def chat(query: str, project_id: str, db: AsyncSession = Depends(get_db)):
 async def get_feed(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Project)
-        .options(selectinload(Project.user)) 
+        .options(selectinload(Project.user),
+                 selectinload(Project.collab_requests).selectinload(CollabRequest.sender)) 
         .order_by(Project.created_at.desc())
         .limit(20)
     )
@@ -193,7 +212,10 @@ async def get_feed(db: AsyncSession = Depends(get_db)):
 async def get_trending_feed(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Project)
-        .options(selectinload(Project.user))  
+        .options(
+            selectinload(Project.user),
+            selectinload(Project.collab_requests).selectinload(CollabRequest.sender)
+        )
         .order_by(Project.views_count.desc())
         .limit(10)
     )
@@ -207,7 +229,11 @@ async def get_project(
 ):
     result = await db.execute(
         select(Project)
-        .options(selectinload(Project.user))  
+        # .options(selectinload(Project.user)) 
+        .options(
+            selectinload(Project.user),
+            selectinload(Project.collab_requests).selectinload(CollabRequest.sender)
+        )
         .where(Project.id == project_id)
     )
     project = result.scalars().first()
@@ -323,9 +349,17 @@ async def get_my_requests(
     result = await db.execute(
         select(CollabRequest)
         .options(
+            # 1. Load the sender of THIS request
             selectinload(CollabRequest.sender),  
-            selectinload(CollabRequest.project),  
-            selectinload(CollabRequest.project).selectinload(Project.user),
+            
+            # 2. Load the project associated with this request
+            selectinload(CollabRequest.project).options(
+                # 2a. Load the project's author
+                selectinload(Project.user),
+                
+                # 2b. FIX: Load the project's OTHER requests (required by ProjectOut)
+                selectinload(Project.collab_requests).selectinload(CollabRequest.sender)
+            )
         )
         .where(CollabRequest.receiver_id == user_id)
     )

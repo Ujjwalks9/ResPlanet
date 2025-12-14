@@ -1,5 +1,7 @@
+# Replace your entire schemas.py with this:
+
 from pydantic import BaseModel, EmailStr
-from typing import List, Optional, Any
+from typing import List, Optional
 from datetime import datetime
 from uuid import UUID
 
@@ -11,6 +13,17 @@ class UserBase(BaseModel):
 
 class UserOut(UserBase):
     id: str # Google ID
+    class Config:
+        from_attributes = True
+
+# --- Helper Schema for ProjectOut ---
+# We use this to avoid circular dependency (Project -> Request -> Project)
+class CollabRequestSimple(BaseModel):
+    id: UUID
+    status: str
+    sender_id: str
+    sender: Optional[UserOut]
+    created_at: datetime
     class Config:
         from_attributes = True
 
@@ -27,7 +40,10 @@ class ProjectOut(BaseModel):
     topics: List[str] = []
     views_count: int
     created_at: datetime
-    user: Optional[UserOut] # Relationship
+    user: Optional[UserOut]
+    
+    # NEW FIELD: This sends the list to the frontend
+    collab_requests: List[CollabRequestSimple] = [] 
     
     class Config:
         from_attributes = True
@@ -39,6 +55,8 @@ class CollabRequestOut(BaseModel):
     sender: UserOut
     project: ProjectOut
     created_at: datetime
+    class Config:
+        from_attributes = True
 
 # --- Chat Schemas ---
 class ChatMessageOut(BaseModel):
@@ -48,3 +66,5 @@ class ChatMessageOut(BaseModel):
     sender_id: str
     created_at: datetime
     sender: Optional[UserOut]
+    class Config:
+        from_attributes = True
